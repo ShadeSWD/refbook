@@ -3,19 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Материалы и среды: справочные константы</title>
-<meta name="description" content="Плотность и модули стали, плотности пресной и морской воды, воздуха, ускорение свободного падения — с первоисточниками.">
+<title>Материалы и среды: справочные таблицы</title>
+<meta name="description" content="Физические характеристики стали (СНиП II-23-81* табл. 63 целиком), категории судостроительной стали РМРС, плотность пресной и морской воды, стандартная атмосфера ГОСТ 4401-81 — с первоисточниками.">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <main class="wrap">
-  <h1>Материалы и среды: справочные константы</h1>
+  <h1>Материалы и среды: справочные таблицы</h1>
+  <p class="lead">Каждая группа характеристик — отдельная таблица со своим первоисточником и своим JSON в API.
+  Ссылка на конкретную строку — значок «#» в её конце (копируется в буфер).</p>
+
+  <div class="cards">
+    <a class="card" href="#steel-phys"><h3>🔩 Сталь: физические характеристики</h3>
+      <p>СНиП II-23-81* прил. 3, табл. 63 целиком: ρ, α, E (прокат, отливки, чугун, канаты), G, ν.</p></a>
+    <a class="card" href="#steel-grades"><h3>⚓ Судостроительная сталь: категории</h3>
+      <p>Правила РМРС: A/B/D/E (ReH 235), A32…F40 (ReH 315/355/390), Rm, A5, температуры ударного изгиба.</p></a>
+    <a class="card" href="#water"><h3>💧 Вода</h3>
+      <p>Конвенционные 1000/1025 кг/м³ теории корабля + плотность чистой воды по температурам 0…100 °C.</p></a>
+    <a class="card" href="#atmosphere"><h3>🌍 Стандартная атмосфера</h3>
+      <p>ГОСТ 4401-81: T, p, ρ, g по высоте −2000…11500 м с шагом 500 м.</p></a>
+  </div>
+
+  <h2 id="steel-phys">Сталь: физические характеристики</h2>
+  <div class="panel"><div class="gtable" data-table="materials-steel-phys" data-prefix="msp"></div></div>
+  <p class="small">JSON: <a href="api/tables/materials-steel-phys.json">api/tables/materials-steel-phys.json</a></p>
+
+  <h2 id="steel-grades">Судостроительная сталь: категории</h2>
+  <div class="panel"><div class="gtable" data-table="materials-steel-grades" data-prefix="msg"></div></div>
+  <p class="small">JSON: <a href="api/tables/materials-steel-grades.json">api/tables/materials-steel-grades.json</a></p>
+
+  <h2 id="water">Вода</h2>
+  <div class="panel"><div class="gtable" data-table="materials-water" data-prefix="mw"></div></div>
+  <p class="small">JSON: <a href="api/tables/materials-water.json">api/tables/materials-water.json</a></p>
+
+  <h2 id="atmosphere">Стандартная атмосфера</h2>
+  <div class="panel"><div class="gtable" data-table="materials-atmosphere" data-prefix="matm"></div></div>
+  <p class="small">JSON: <a href="api/tables/materials-atmosphere.json">api/tables/materials-atmosphere.json</a></p>
+
+  <h2 id="summary">Сводка ключевых констант</h2>
   <div class="panel"><div class="gtable" data-table="materials" data-prefix="m"></div></div>
-  <p class="small">Ссылка на конкретную строку — значок «#» в её конце (копируется в буфер).
-  Данные этой таблицы как JSON: <a href="api/tables/materials.json">api/tables/materials.json</a>.</p>
+  <p class="small">JSON: <a href="api/tables/materials.json">api/tables/materials.json</a> (краткая сводка, обратная совместимость со старыми ссылками).</p>
+
   <p><a href="sortament">← Все сортаменты</a></p>
 </main>
-<script src="assets/site.js" data-root="./" data-page="sortament"></script>
+<script src="assets/site.js" data-root="./" data-page="materials"></script>
 <script src="assets/tabview.js"></script>
 </body>
 </html>
