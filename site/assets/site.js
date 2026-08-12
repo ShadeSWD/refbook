@@ -6,10 +6,14 @@
   const page = document.currentScript.dataset.page || '';
   const nav = [
     { href: 'index', key: 'index', title: 'Обзор' },
+    { href: 'sites', key: 'sites', title: 'Сайты' },
     { href: 'sortament', key: 'sortament', title: 'Сортаменты' },
     { href: 'materials', key: 'materials', title: 'Материалы' },
+    { href: 'naca', key: 'naca', title: 'NACA' },
     { href: 'rmrs', key: 'rmrs', title: 'РМРС' },
-    { href: 'api', key: 'api', title: 'Либы и API' },
+    { href: 'ship', key: 'ship', title: 'Каскад' },
+    { href: 'terms', key: 'terms', title: 'Словарь' },
+    { href: 'api', key: 'api', title: 'Библиотеки и API' },
     { href: 'sources', key: 'sources', title: 'Источники' },
   ];
   const header = document.createElement('header');
@@ -24,7 +28,7 @@
   footer.className = 'site';
   footer.innerHTML = `<div class="wrap">
     <div>Оцифрованные сортаменты и нормативы с указанием первоисточников ·
-    данные и формулы доступны как <a href="${root}api">либы и API</a></div>
+    данные и формулы доступны как <a href="${root}api">библиотеки и API</a></div>
   </div>`;
   document.body.appendChild(footer);
 })();

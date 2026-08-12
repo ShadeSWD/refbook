@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Словарь терминов</title>
+<meta name="description" content="Словарь терминов кораблестроительных дисциплин: краткие научные определения с якорями на каждый термин; определения доступны по API для всплывающих подсказок на сайтах кластера.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <h1>Словарь терминов</h1>
+  <p class="lead">Определения терминов, встречающихся на сайтах кластера.
+  На каждый термин есть якорная ссылка; определения выдаются по
+  <a href="api">API</a> — на сайтах кластера они появляются всплывающими
+  подсказками при наведении на термин.</p>
+  <div class="panel">
+    <p><input type="search" id="term-q" placeholder="поиск термина…" style="padding:6px 10px;width:260px"></p>
+    <dl id="terms-list" style="font:15px/1.5 Georgia,serif"></dl>
+  </div>
+  <p class="small">API: <a href="api/tables/terms.json">весь словарь JSON</a> ·
+  <a href="api/terms?q=метацентр">api/terms?q=метацентр</a> — поиск по слову.</p>
+</main>
+<script src="assets/site.js" data-root="./" data-page="terms"></script>
+<script>
+'use strict';
+fetch('api/tables/terms.json').then(r => r.json()).then(d => {
+  const dl = document.getElementById('terms-list');
+  const slug = t => 't-' + t.toLowerCase().replace(/[^a-zа-яё0-9]+/g, '-');
+  const entries = Object.entries(d.terms).sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+  dl.innerHTML = entries.map(([t, def]) =>
+    `<dt id="${slug(t)}" style="font-weight:700;margin-top:12px">${t}
+       <a href="#${slug(t)}" style="text-decoration:none;color:#8a8a92" title="ссылка на термин">#</a></dt>
+     <dd style="margin:2px 0 0 0;color:#3a3a42">${def}</dd>`).join('');
+  document.getElementById('term-q').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    dl.querySelectorAll('dt').forEach(dt => {
+      const dd = dt.nextElementSibling;
+      const vis = !q || dt.textContent.toLowerCase().includes(q) || dd.textContent.toLowerCase().includes(q);
+      dt.style.display = dd.style.display = vis ? '' : 'none';
+    });
+  });
+  if (location.hash) {
+    const el = document.querySelector(location.hash.replace(/[^#a-zа-яё0-9-]/gi, ''));
+    if (el) { el.style.background = '#fdf3d7'; el.scrollIntoView({ block: 'center' }); }
+  }
+});
+</script>
+</body>
+</html>

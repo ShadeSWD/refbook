@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Каскад расчётов по Правилам</title>
+<meta name="description" content="Вычислительный каскад Правил РМРС и Кодекса ОСНС: выбираете величину — разворачивается всё дерево формул с подстановками; любую промежуточную величину можно задать известной или посчитать глубже.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <h1>Каскад расчётов по Правилам</h1>
+  <p class="lead">Правила — это система формул, где каждая величина выражается
+  через другие. Здесь эта система оцифрована как вычислительный граф: выберите
+  целевую величину — развернётся всё дерево её расчёта, от исходных данных
+  судна до результата, с формулой и числовой подстановкой в каждом узле.
+  Любую промежуточную величину можно <b>задать известной</b> (флажок у узла) —
+  тогда каскад берёт ваше значение; уберите флажок — и она снова считается
+  по Правилам. Оцифрованная часть наращивается; структура рассчитана на
+  полный охват томов Правил.</p>
+
+  <div class="panel">
+    <label>Целевая величина:
+      <select id="target" style="padding:5px 8px;max-width:100%"></select></label>
+    <div class="controls" id="ship-inputs" style="margin-top:10px"></div>
+    <h3>Дерево расчёта</h3>
+    <div id="tree" style="font:14.5px system-ui"></div>
+  </div>
+  <p class="small">То же самое по HTTP:
+  <a id="api-link" href="api/ship/calc?target=Mw_hog&L=100&B=16&Cb=0.7">api/ship/calc?target=…</a> —
+  ответ содержит полное дерево с формулами и подстановками; список величин —
+  <a href="api/ship/quantities">api/ship/quantities</a>. Библиотека —
+  <a href="lib/rmrs-graph.js">lib/rmrs-graph.js</a> (работает и в браузере, и в Node).</p>
+</main>
+<script src="assets/site.js" data-root="./" data-page="rmrs"></script>
+<script src="lib/rmrs-graph.js"></script>
+<script>
+'use strict';
+const DEFAULTS = { L: 100, B: 16, d: 5.6, H: 9.6, Cb: 0.7, zg: 4.8, V: 3973,
+  GM: 0.38, k_mat: 1, Msw: 180000, W_deck: 3.06, A_par: 400, Z_par: 5,
+  Ak: 5, P_wind: 504, v_kn: 15, d_TL: 4.4, d_TH: 6.8, KB: 3.1,
+  I_TL: 6500, I_TH: 9500 };
+const overrides = {};   // {id: value} — узлы, заданные пользователем
+const sel = document.getElementById('target');
+for (const q of RMRSG.quantities())
+  sel.insertAdjacentHTML('beforeend', `<option value="${q.id}">${q.id} — ${q.title} (${q.rule})</option>`);
+sel.value = 'theta1';
+
+function ctxFor(target) {
+  const need = RMRSG.inputsFor(target);
+  const ctx = {};
+  for (const id of need) ctx[id] = +document.querySelector(`[data-in="${id}"]`)?.value || DEFAULTS[id] || 0;
+  Object.assign(ctx, overrides);
+  return ctx;
+}
+function renderInputs() {
+  const need = RMRSG.inputsFor(sel.value);
+  const meta = Object.fromEntries(RMRSG.inputs().map(i => [i.id, i]));
+  document.getElementById('ship-inputs').innerHTML = need.map(id =>
+    `<label>${id} <input type="number" step="any" value="${DEFAULTS[id] ?? ''}" data-in="${id}" style="width:86px">
+     <span class="small">${meta[id] ? meta[id].title + (meta[id].unit !== '—' ? ', ' + meta[id].unit : '') : ''}</span></label>`).join(' ');
+  document.querySelectorAll('[data-in]').forEach(i => i.addEventListener('input', renderTree));
+}
+function nodeHTML(n, depth) {
+  const isLeaf = !n.children || !n.children.length;
+  const ov = Object.prototype.hasOwnProperty.call(overrides, n.id);
+  const head = `<b>${n.id}</b> = <b>${n.value}</b>${n.unit && n.unit !== '—' ? ' ' + n.unit : ''}
+    <span style="color:#6b6b74">— ${n.title}</span>
+    ${n.rule ? `<span class="small" style="color:#8a8a92">[${n.rule}]</span>` : ''}
+    ${!isLeaf ? `<label class="small" style="margin-left:8px;white-space:nowrap">
+       <input type="checkbox" data-ov="${n.id}" ${ov ? 'checked' : ''}> задать:
+       <input type="number" step="any" data-ovval="${n.id}" value="${ov ? overrides[n.id] : n.value}"
+         style="width:80px" ${ov ? '' : 'disabled'}></label>` : ''}`;
+  if (isLeaf)
+    return `<div style="margin:4px 0 4px ${depth * 22}px;color:#3a3a42">• ${head}
+      <span class="small" style="color:#1a7f37">(${n.source || 'задано'})</span></div>`;
+  const body = ov ? `<div style="margin-left:${depth * 22 + 22}px" class="small">значение задано пользователем — ветка формулы отключена</div>`
+    : `<div style="margin:2px 0 2px ${depth * 22 + 22}px;color:#3a3a42">${n.formula}
+        ${n.sub ? ` = <span style="color:#6b6b74">${n.sub}</span>` : ''} = <b>${n.value}</b></div>
+       ${n.children.map(c => nodeHTML(c, depth + 1)).join('')}`;
+  return `<details open style="margin:6px 0 6px ${depth * 22}px"><summary>${head}</summary>${body}</details>`;
+}
+function renderTree() {
+  let tree;
+  try { tree = RMRSG.compute(sel.value, ctxFor(sel.value)); }
+  catch (e) { document.getElementById('tree').innerHTML = `<div class="note warn">${e.message}</div>`; return; }
+  document.getElementById('tree').innerHTML = nodeHTML(tree, 0);
+  document.querySelectorAll('[data-ov]').forEach(cb => cb.addEventListener('change', () => {
+    const id = cb.dataset.ov;
+    if (cb.checked) overrides[id] = +document.querySelector(`[data-ovval="${id}"]`).value;
+    else delete overrides[id];
+    renderTree();
+  }));
+  document.querySelectorAll('[data-ovval]').forEach(inp => inp.addEventListener('input', () => {
+    if (Object.prototype.hasOwnProperty.call(overrides, inp.dataset.ovval)) {
+      overrides[inp.dataset.ovval] = +inp.value; renderTree();
+    }
+  }));
+  const ctx = ctxFor(sel.value);
+  document.getElementById('api-link').href =
+    `api/ship/calc?target=${sel.value}&` + Object.entries(ctx).map(([k, v]) => `${k}=${v}`).join('&');
+}
+sel.addEventListener('change', () => { renderInputs(); renderTree(); });
+renderInputs(); renderTree();
+</script>
+</body>
+</html>

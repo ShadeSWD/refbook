@@ -21,3 +21,6 @@ services:
     volumes:
       - ../api-server/server.js:/srv/server.js:ro
       - ../site/lib/rmrs.js:/lib/rmrs.js:ro
+      - ../site/lib/rmrs-graph.js:/lib/rmrs-graph.js:ro
+      - ../site/lib/naca.js:/lib/naca.js:ro
+      - ../site/api/tables/terms.json:/data/terms.json:ro

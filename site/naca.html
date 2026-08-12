@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Профили NACA</title>
+<meta name="description" content="Библиотека профилей NACA четырёхзначной серии: формула ординат, живой чертёж профиля, классическая таблица ординат, радиус носика — с доступом из программ и по API.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <h1>Профили NACA</h1>
+  <p class="lead">Четырёхзначная серия NACA задаётся аналитически: первая
+  цифра — кривизна средней линии в процентах хорды, вторая — положение
+  максимума кривизны в десятых долях хорды, две последние — относительная
+  толщина в процентах. Симметричные профили 00XX применяются для перьев
+  рулей (см. <a href="https://shadeswd.duckdns.org/shipsys/rudder">расчёт
+  рулевого устройства</a>), несущие — для крыльев и стабилизаторов.</p>
+  <div class="panel">
+    <div class="controls">
+      <label>профиль NACA <input id="code" value="0020" size="6" style="padding:5px 8px;width:80px"></label>
+      <label>хорда, мм <input id="chord" type="number" value="4000" style="width:90px"></label>
+    </div>
+    <div id="prof-svg"></div>
+    <div id="prof-info" class="note tip"></div>
+    <h3>Таблица ординат</h3>
+    <div style="overflow-x:auto"><table class="data" id="prof-table"
+      style="border-collapse:collapse;font:13.5px system-ui"></table></div>
+  </div>
+  <p class="small">Формула полутолщины: y_t = 5t·(0,2969√x̄ − 0,1260x̄ −
+  0,3516x̄² + 0,2843x̄³ − 0,1036x̄⁴), радиус носика r = 1,1019·t²
+  (Abbott I., von Doenhoff A. Theory of Wing Sections). Программный доступ:
+  библиотека <a href="lib/naca.js">lib/naca.js</a> (браузер и Node) или API
+  <a href="api/naca?code=0020">api/naca?code=0020</a>.</p>
+</main>
+<script src="assets/site.js" data-root="./" data-page="sortament"></script>
+<script src="lib/naca.js"></script>
+<script>
+'use strict';
+function render() {
+  const code = document.getElementById('code').value.trim() || '0020';
+  const chord = +document.getElementById('chord').value || 1000;
+  let pts, tbl;
+  try { pts = NACA.points(code, 80); tbl = NACA.table(code); }
+  catch (e) { document.getElementById('prof-info').textContent = e.message; return; }
+  const W = 760, H = 220, pad = 40, sx = (W - 2 * pad);
+  const ymax = Math.max(...pts.map(p => Math.max(Math.abs(p.yu), Math.abs(p.yl)))) * 1.25;
+  const Y = v => H / 2 - v / ymax * (H / 2 - 24);
+  const X = v => pad + v * sx;
+  const up = pts.map(p => `${X(p.xu).toFixed(1)},${Y(p.yu).toFixed(1)}`).join(' ');
+  const lo = [...pts].reverse().map(p => `${X(p.xl).toFixed(1)},${Y(p.yl).toFixed(1)}`).join(' ');
+  const cam = pts.map(p => `${X(p.x).toFixed(1)},${Y(p.yc).toFixed(1)}`).join(' ');
+  document.getElementById('prof-svg').innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" class="geo-board">
+      <line x1="${pad}" y1="${H / 2}" x2="${W - pad}" y2="${H / 2}" stroke="#8a8a92" stroke-dasharray="5 4"/>
+      <polygon points="${up} ${lo}" fill="rgba(21,94,117,.10)" stroke="#155e75" stroke-width="2"/>
+      <polyline points="${cam}" fill="none" stroke="#b3382e" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="${pad}" y="18" style="font:12px system-ui;fill:#3a3a42">NACA ${NACA.parse(code).code},
+        хорда ${chord} мм; красный пунктир — средняя линия</text>
+    </svg>`;
+  const p = NACA.parse(code);
+  document.getElementById('prof-info').innerHTML =
+    `максимальная толщина t = <b>${(p.t * 100).toFixed(0)} %</b> хорды = <b>${(p.t * chord).toFixed(0)} мм</b> ·
+     радиус носика r = 1,1019·t² = <b>${(NACA.noseRadius(code) * chord).toFixed(1)} мм</b>` +
+    (p.m ? ` · кривизна ${(p.m * 100).toFixed(0)} % на ${(p.p * 100).toFixed(0)} % хорды` : ' · симметричный');
+  document.getElementById('prof-table').innerHTML =
+    '<tr><th style="padding:4px 10px;border-bottom:1.5px solid #d8d6cf">x, % хорды</th>' +
+    tbl.map(r => `<th style="padding:4px 8px;border-bottom:1.5px solid #d8d6cf">${r['x, % хорды']}</th>`).join('') + '</tr>' +
+    '<tr><td style="padding:4px 10px"><b>y_t, % хорды</b></td>' +
+    tbl.map(r => `<td style="padding:4px 8px">${r['y_t, % хорды'].toFixed(2)}</td>`).join('') + '</tr>' +
+    '<tr><td style="padding:4px 10px"><b>y_t, мм</b></td>' +
+    tbl.map(r => `<td style="padding:4px 8px">${(r['y_t, % хорды'] * chord / 100).toFixed(1)}</td>`).join('') + '</tr>';
+}
+document.getElementById('code').addEventListener('input', render);
+document.getElementById('chord').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>
