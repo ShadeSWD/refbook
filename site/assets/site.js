@@ -15,9 +15,9 @@
   const header = document.createElement('header');
   header.className = 'site';
   header.innerHTML = `<div class="wrap">
-    <a class="logo" href="${root}index"><span class="logo-badge">📚</span>
+    <a class="logo" href="${root}index"><span style="font-size:22px">📚</span>
       <span>Инженерный справочник</span></a>
-    <nav>${nav.map(n => `<a href="${root}${n.href}"${n.key === page ? ' class="active"' : ''}>${n.title}</a>`).join('')}</nav>
+    <nav class="top">${nav.map(n => `<a href="${root}${n.href}"${n.key === page ? ' class="on"' : ''}>${n.title}</a>`).join('')}</nav>
   </div>`;
   document.body.prepend(header);
   const footer = document.createElement('footer');
