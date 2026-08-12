@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Либы и API справочника</title>
+<meta name="description" content="Как встроить формулы РМРС (rmrs.js) и таблицы ГОСТ (tables.js) на свой сайт или дернуть их по HTTP API: данные, расчёты и пошаговые подстановки одним запросом.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <h1>Либы и API</h1>
+  <p class="lead">У справочника две библиотеки: <b>rmrs.js</b> — формулы и
+  полноценные расчёты (каждая функция возвращает не только числа, но и
+  пошаговые подстановки), и <b>tables.js</b> — оцифрованные таблицы ГОСТ.
+  Оба слоя доступны и как подключаемый скрипт, и как HTTP API — их
+  использует сам справочник (страница <a href="rmrs">РМРС</a>) и решатели
+  сайтов кластера.</p>
+
+  <h2>1. Встраивание на страницу</h2>
+  <div class="panel"><pre style="overflow-x:auto;font:13px ui-monospace,monospace">&lt;script src="https://shadeswd.duckdns.org/ref/lib/rmrs.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const r = RMRS.waveMoments({ L: 100, B: 16, Cb: 0.7 });
+  console.log(r.values);   // { cw: 7.92, Mw_hog: 168571, Mw_sag: -195188 }
+  console.log(r.steps);    // [{f:'c_w = …', sub:'10,75 − …', res:7.92}, …]
+&lt;/script&gt;
+
+&lt;script src="https://shadeswd.duckdns.org/ref/lib/tables.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const pb = await REFTAB.row('gost-21937', '20а');
+  console.log(pb['Масса 1 м, кг']);   // 21.47
+&lt;/script&gt;</pre></div>
+
+  <h2>2. HTTP API</h2>
+  <div class="panel">
+    <p><b>Данные</b> (статические JSON, CORS открыт):</p>
+    <pre style="overflow-x:auto;font:13px ui-monospace,monospace">GET /ref/api/tables/gost-21937.json   → вся таблица с колонками и источником
+GET /ref/api/tables/materials.json</pre>
+    <p><b>Расчёты</b> (тот же rmrs.js, исполняется на сервере — единый
+    источник формул):</p>
+    <pre style="overflow-x:auto;font:13px ui-monospace,monospace">GET /ref/api/calc                                → список функций
+GET /ref/api/calc/waveMoments?L=100&amp;B=16&amp;Cb=0.7  → { values, steps, rule }
+GET /ref/api/calc/rollPeriod?B=16&amp;d=5.6&amp;L=100&amp;h=0.38</pre>
+    <p class="small">Попробовать прямо сейчас:
+      <a href="api/calc/waveMoments?L=100&B=16&Cb=0.7">api/calc/waveMoments?L=100&amp;B=16&amp;Cb=0.7</a></p>
+  </div>
+
+  <h2>3. Зачем так</h2>
+  <p>Формулы правил и таблицы сортаментов нужны каждому предмету: общая
+  прочность берёт волновые моменты и W_min, технология — полособульбы и
+  трубы, устройства — площадь руля, статика — период качки. Вместо копий в
+  каждом сайте — один проверенный источник с первоисточниками и датами
+  сверки; пошаговые подстановки в ответе позволяют любому решателю не просто
+  получить число, а показать студенту, откуда оно взялось.</p>
+</main>
+<script src="assets/site.js" data-root="./" data-page="api"></script>
+</body>
+</html>

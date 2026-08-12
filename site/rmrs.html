@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Формулы Правил РМРС</title>
+<meta name="description" content="Оцифрованные формулы Правил РМРС и Кодекса ОСНС: волновые изгибающие моменты, минимальный момент сопротивления, допускаемые напряжения, площадь руля, период качки — живые калькуляторы с подстановками.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <h1>Формулы Правил РМРС</h1>
+  <p class="lead">Каждая формула ниже оцифрована в библиотеке
+  <a href="api">rmrs.js</a>: функция возвращает и результат, и цепочку
+  «формула → подстановка → результат». Здесь — живые калькуляторы поверх той
+  же либы (то есть сайт сам ест свой API). Этими же функциями пользуются
+  решатели <a href="https://shadeswd.duckdns.org/strength/brus">строительной механики</a>
+  и других сайтов кластера.</p>
+  <div class="panel" id="calcs"></div>
+  <p class="small">Формулы сверены с текстами Правил РМРС (ч. II «Корпус»,
+  ч. III «Устройства…») и Кодекса ОСНС 2008 в ходе построения сайтов кластера;
+  первоисточники — в <a href="sources">источниках</a>.</p>
+</main>
+<script src="assets/site.js" data-root="./" data-page="rmrs"></script>
+<script src="lib/rmrs.js"></script>
+<script>
+'use strict';
+const CALCS = [
+  { fn: 'waveMoments', title: 'Волновые изгибающие моменты (ч. II, 1.4.4.1 / IACS UR S11)',
+    inputs: [['L', 100, 'м'], ['B', 16, 'м'], ['Cb', 0.7, '']] },
+  { fn: 'minSectionModulus', title: 'Минимальный момент сопротивления (ч. II, 1.4.6.7)',
+    inputs: [['L', 100, 'м'], ['B', 16, 'м'], ['Cb', 0.7, ''], ['k', 1, '']] },
+  { fn: 'allowableStress', title: 'Допускаемые напряжения общего изгиба (ч. II, 1.4.6)',
+    inputs: [['k', 1, '(1 — обычная сталь; 0,78/0,72 — повышенной прочности)']] },
+  { fn: 'rudderArea', title: 'Площадь пера руля (ч. III, 2.2)',
+    inputs: [['L', 170, 'м'], ['d', 10, 'м'], ['B', 24, 'м'], ['Cb', 0.8, '']] },
+  { fn: 'rollPeriod', title: 'Период бортовой качки (Кодекс ОСНС 2008)',
+    inputs: [['B', 16, 'м'], ['d', 5.6, 'м'], ['L', 100, 'м'], ['h', 0.38, 'м']] },
+];
+const host = document.getElementById('calcs');
+for (const c of CALCS) {
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:0 0 22px';
+  box.innerHTML = `<h3 style="margin:6px 0">${c.title}</h3>
+    <div class="controls">${c.inputs.map(([n, v, u]) =>
+      `<label>${n} <input type="number" step="any" value="${v}" data-k="${n}" style="width:80px"> <span class="small">${u}</span></label>`).join(' ')}</div>
+    <div class="note tip out"></div>`;
+  host.appendChild(box);
+  const render = () => {
+    const p = {};
+    box.querySelectorAll('input').forEach(i => { p[i.dataset.k] = +i.value; });
+    const r = RMRS[c.fn](p);
+    box.querySelector('.out').innerHTML = r.steps.map(s =>
+      `<div style="margin:4px 0;font:14px system-ui">${s.f} = <span style="color:#6b6b74">${s.sub}</span> = <b>${s.res}</b></div>`).join('');
+  };
+  box.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
+  render();
+}
+</script>
+</body>
+</html>
