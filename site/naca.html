@@ -13,13 +13,18 @@
   <p class="lead">Четырёхзначная серия NACA задаётся аналитически: первая
   цифра — кривизна средней линии в процентах хорды, вторая — положение
   максимума кривизны в десятых долях хорды, две последние — относительная
-  толщина в процентах. Симметричные профили 00XX применяются для перьев
-  рулей (см. <a href="https://shadeswd.duckdns.org/shipsys/rudder">расчёт
+  толщина в процентах. Библиотека считает и симметричные (00XX), и
+  несимметричные профили: у несимметричных ординаты верхней и нижней
+  поверхностей откладываются по нормали к искривлённой средней линии.
+  Симметричные применяются для перьев рулей (см. <a href="https://shadeswd.duckdns.org/shipsys/rudder">расчёт
   рулевого устройства</a>), несущие — для крыльев и стабилизаторов.</p>
   <div class="panel">
     <div class="controls">
       <label>профиль NACA <input id="code" value="0020" size="6" style="padding:5px 8px;width:80px"></label>
       <label>хорда, мм <input id="chord" type="number" value="4000" style="width:90px"></label>
+      <span class="small">примеры: <a href="#" data-p="0012">0012</a> · <a href="#" data-p="0018">0018</a> ·
+      <a href="#" data-p="0020">0020</a> · несимметричные: <a href="#" data-p="2412">2412</a> ·
+      <a href="#" data-p="4412">4412</a> · <a href="#" data-p="6409">6409</a></span>
     </div>
     <div id="prof-svg"></div>
     <div id="prof-info" class="note tip"></div>
@@ -63,13 +68,38 @@ function render() {
     `максимальная толщина t = <b>${(p.t * 100).toFixed(0)} %</b> хорды = <b>${(p.t * chord).toFixed(0)} мм</b> ·
      радиус носика r = 1,1019·t² = <b>${(NACA.noseRadius(code) * chord).toFixed(1)} мм</b>` +
     (p.m ? ` · кривизна ${(p.m * 100).toFixed(0)} % на ${(p.p * 100).toFixed(0)} % хорды` : ' · симметричный');
-  document.getElementById('prof-table').innerHTML =
+  let rows =
     '<tr><th style="padding:4px 10px;border-bottom:1.5px solid #d8d6cf">x, % хорды</th>' +
-    tbl.map(r => `<th style="padding:4px 8px;border-bottom:1.5px solid #d8d6cf">${r['x, % хорды']}</th>`).join('') + '</tr>' +
-    '<tr><td style="padding:4px 10px"><b>y_t, % хорды</b></td>' +
-    tbl.map(r => `<td style="padding:4px 8px">${r['y_t, % хорды'].toFixed(2)}</td>`).join('') + '</tr>' +
-    '<tr><td style="padding:4px 10px"><b>y_t, мм</b></td>' +
-    tbl.map(r => `<td style="padding:4px 8px">${(r['y_t, % хорды'] * chord / 100).toFixed(1)}</td>`).join('') + '</tr>';
+    tbl.map(r => `<th style="padding:4px 8px;border-bottom:1.5px solid #d8d6cf">${r['x, % хорды']}</th>`).join('') + '</tr>';
+  if (p.m === 0) {
+    rows += '<tr><td style="padding:4px 10px"><b>y_t, % хорды</b></td>' +
+      tbl.map(r => `<td style="padding:4px 8px">${r['y_t, % хорды'].toFixed(2)}</td>`).join('') + '</tr>' +
+      '<tr><td style="padding:4px 10px"><b>y_t, мм</b></td>' +
+      tbl.map(r => `<td style="padding:4px 8px">${(r['y_t, % хорды'] * chord / 100).toFixed(1)}</td>`).join('') + '</tr>';
+  } else {
+    // несимметричный: ординаты верхней и нижней поверхностей
+    const st = tbl.map(r => r['x, % хорды'] / 100);
+    const ords = st.map(x => {
+      const yt = NACA.halfThickness(p.t, x, true);
+      const c = NACA.camber(p.m, p.p, x);
+      const th = Math.atan(c.slope);
+      return { yu: (c.yc + yt * Math.cos(th)) * 100, yl: (c.yc - yt * Math.cos(th)) * 100 };
+    });
+    rows += '<tr><td style="padding:4px 10px"><b>y_верх, % хорды</b></td>' +
+      ords.map(o => `<td style="padding:4px 8px">${o.yu.toFixed(2)}</td>`).join('') + '</tr>' +
+      '<tr><td style="padding:4px 10px"><b>y_низ, % хорды</b></td>' +
+      ords.map(o => `<td style="padding:4px 8px">${o.yl.toFixed(2)}</td>`).join('') + '</tr>' +
+      '<tr><td style="padding:4px 10px"><b>y_верх, мм</b></td>' +
+      ords.map(o => `<td style="padding:4px 8px">${(o.yu * chord / 100).toFixed(1)}</td>`).join('') + '</tr>' +
+      '<tr><td style="padding:4px 10px"><b>y_низ, мм</b></td>' +
+      ords.map(o => `<td style="padding:4px 8px">${(o.yl * chord / 100).toFixed(1)}</td>`).join('') + '</tr>';
+  }
+  document.getElementById('prof-table').innerHTML = rows;
+  document.querySelectorAll('[data-p]').forEach(a => a.onclick = e => {
+    e.preventDefault();
+    document.getElementById('code').value = a.dataset.p;
+    render();
+  });
 }
 document.getElementById('code').addEventListener('input', render);
 document.getElementById('chord').addEventListener('input', render);
