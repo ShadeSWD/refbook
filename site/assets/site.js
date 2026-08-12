@@ -27,7 +27,7 @@
   const footer = document.createElement('footer');
   footer.className = 'site';
   footer.innerHTML = `<div class="wrap">
-    <div>Оцифрованные сортаменты и нормативы с указанием первоисточников ·
+    <div>Оцифрованные сортаменты и нормативы с указанием методикаов ·
     данные и формулы доступны как <a href="${root}api">библиотеки и API</a></div>
   </div>`;
   document.body.appendChild(footer);
