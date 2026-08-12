@@ -22,10 +22,14 @@ http.createServer((req, res) => {
   };
   if (u.pathname === '/terms') {
     const q = (u.searchParams.get('q') || '').toLowerCase();
+    const topic = (u.searchParams.get('topic') || '').toLowerCase();
     const all = terms();
-    if (!q) return send(200, { count: Object.keys(all).length, terms: all });
-    const hit = Object.entries(all).filter(([t, d]) =>
-      t.toLowerCase().includes(q) || d.toLowerCase().includes(q));
+    const defOf = v => typeof v === 'string' ? v : v.def;
+    const topicsOf = v => typeof v === 'string' ? [] : (v.t || []);
+    let hit = Object.entries(all);
+    if (topic) hit = hit.filter(([, v]) => topicsOf(v).some(t => t.toLowerCase() === topic));
+    if (q) hit = hit.filter(([t, v]) => t.toLowerCase().includes(q) || defOf(v).toLowerCase().includes(q));
+    if (!q && !topic) return send(200, { count: hit.length, terms: all });
     return send(200, Object.fromEntries(hit));
   }
   if (u.pathname === '/naca') {

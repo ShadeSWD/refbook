@@ -15,7 +15,9 @@
   <a href="api">API</a> — на сайтах кластера они появляются всплывающими
   подсказками при наведении на термин.</p>
   <div class="panel">
-    <p><input type="search" id="term-q" placeholder="поиск термина…" style="padding:6px 10px;width:260px"></p>
+    <p><input type="search" id="term-q" placeholder="поиск термина…" style="padding:6px 10px;width:260px">
+    <span id="term-count" class="small"></span></p>
+    <p id="topic-chips" style="display:flex;flex-wrap:wrap;gap:6px"></p>
     <dl id="terms-list" style="font:15px/1.5 Georgia,serif"></dl>
   </div>
   <p class="small">API: <a href="api/tables/terms.json">весь словарь JSON</a> ·
@@ -27,19 +29,39 @@
 fetch('api/tables/terms.json').then(r => r.json()).then(d => {
   const dl = document.getElementById('terms-list');
   const slug = t => 't-' + t.toLowerCase().replace(/[^a-zа-яё0-9]+/g, '-');
-  const entries = Object.entries(d.terms).sort((a, b) => a[0].localeCompare(b[0], 'ru'));
-  dl.innerHTML = entries.map(([t, def]) =>
-    `<dt id="${slug(t)}" style="font-weight:700;margin-top:12px">${t}
+  const norm = v => typeof v === 'string' ? { def: v, t: ['общее'] } : v;
+  const entries = Object.entries(d.terms).map(([k, v]) => [k, norm(v)])
+    .sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+  let topic = '';
+  dl.innerHTML = entries.map(([t, v]) =>
+    `<dt id="${slug(t)}" data-topics="${v.t.join('|')}" style="font-weight:700;margin-top:12px">${t}
+       <span class="small" style="font-weight:400;color:#8a8a92">· ${v.t.join(', ')}</span>
        <a href="#${slug(t)}" style="text-decoration:none;color:#8a8a92" title="ссылка на термин">#</a></dt>
-     <dd style="margin:2px 0 0 0;color:#3a3a42">${def}</dd>`).join('');
-  document.getElementById('term-q').addEventListener('input', e => {
-    const q = e.target.value.toLowerCase();
+     <dd style="margin:2px 0 0 0;color:#3a3a42">${v.def}</dd>`).join('');
+  const chips = document.getElementById('topic-chips');
+  const topics = d.topics || [...new Set(entries.flatMap(([, v]) => v.t))].sort((a, b) => a.localeCompare(b, 'ru'));
+  chips.innerHTML = `<button class="badge" data-t="" style="cursor:pointer">все темы</button>` +
+    topics.map(t => `<button class="badge" data-t="${t}" style="cursor:pointer">${t}</button>`).join('');
+  function apply() {
+    const q = document.getElementById('term-q').value.toLowerCase();
+    let n = 0;
     dl.querySelectorAll('dt').forEach(dt => {
       const dd = dt.nextElementSibling;
-      const vis = !q || dt.textContent.toLowerCase().includes(q) || dd.textContent.toLowerCase().includes(q);
+      const okQ = !q || dt.textContent.toLowerCase().includes(q) || dd.textContent.toLowerCase().includes(q);
+      const okT = !topic || dt.dataset.topics.split('|').includes(topic);
+      const vis = okQ && okT;
       dt.style.display = dd.style.display = vis ? '' : 'none';
+      if (vis) n++;
     });
+    document.getElementById('term-count').textContent = `показано ${n} из ${entries.length}`;
+    chips.querySelectorAll('button').forEach(b =>
+      b.style.outline = b.dataset.t === topic ? '2px solid var(--accent)' : 'none');
+  }
+  chips.addEventListener('click', e => {
+    if (e.target.dataset.t !== undefined) { topic = e.target.dataset.t; apply(); }
   });
+  document.getElementById('term-q').addEventListener('input', apply);
+  apply();
   if (location.hash) {
     const el = document.querySelector(location.hash.replace(/[^#a-zа-яё0-9-]/gi, ''));
     if (el) { el.style.background = '#fdf3d7'; el.scrollIntoView({ block: 'center' }); }

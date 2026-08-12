@@ -4,58 +4,175 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Формулы Правил РМРС</title>
-<meta name="description" content="Оцифрованные формулы Правил РМРС и Кодекса ОСНС: волновые изгибающие моменты, минимальный момент сопротивления, допускаемые напряжения, площадь руля, период качки — живые калькуляторы с подстановками.">
+<meta name="description" content="Оцифрованные формулы Правил РМРС и Кодекса ОСНС по разделам: общий изгиб корпуса, рулевое устройство полным каскадом, характеристика снабжения, качка и критерии остойчивости, SGISC — живые калькуляторы с подстановками.">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <main class="wrap">
   <h1>Формулы Правил РМРС</h1>
-  <p class="lead">Каждая формула ниже оцифрована в библиотеке
-  <a href="api">rmrs.js</a>: функция возвращает и результат, и цепочку
-  «формула → подстановка → результат». Здесь — живые калькуляторы поверх той же
-  библиотеки — страница пользуется тем же кодом, что и внешний API. Эти же функции используют
+  <p class="lead">Каждая формула ниже оцифрована в библиотеках
+  <a href="api">rmrs.js</a> и <a href="lib/rmrs-graph.js">rmrs-graph.js</a>:
+  функция возвращает и результат, и цепочку «формула → подстановка → результат».
+  Страница пользуется тем же кодом, что и внешний API; эти же функции используют
   расчёты <a href="https://shadeswd.duckdns.org/strength/brus">строительной механики</a>
-  и других сайтов кластера.</p>
-  <div class="note tip">Эти калькуляторы — отдельные формулы. Полная система,
-  где расчёт любой величины автоматически разворачивает все зависимые формулы
-  (и любую из них можно задать известной), — на странице
+  и других сайтов кластера. Оцифровано величин: <b id="q-count">…</b>.
+  Объём наращивается, цель — полный охват; структура каскада рассчитана на все
+  тома Правил.</p>
+  <div class="note tip">Ниже — отдельные формулы и живые калькуляторы. Полная
+  система, где расчёт любой величины автоматически разворачивает все зависимые
+  формулы (и любую из них можно задать известной), — на странице
   <a href="ship">«Каскад расчётов по Правилам»</a>.</div>
-  <div class="panel" id="calcs"></div>
+
+  <nav class="panel" id="toc" aria-label="Разделы Правил">
+    <b>Разделы:</b>
+    <a href="#sec-hull">ч. II «Корпус» — общий изгиб</a> ·
+    <a href="#sec-rudder">ч. III «Устройства» — рулевое</a> ·
+    <a href="#sec-supply">ч. III — снабжение</a> ·
+    <a href="#sec-osns">Кодекс ОСНС — качка и критерии</a> ·
+    <a href="#sec-sgisc">SGISC</a>
+  </nav>
+
+  <div id="sections"></div>
+
   <p class="small">Формулы сверены с текстами Правил РМРС (ч. II «Корпус»,
   ч. III «Устройства…») и Кодекса ОСНС 2008 в ходе построения сайтов кластера;
+  каскад рулевого устройства выверен по числам расчётной работы
+  (<a href="https://shadeswd.duckdns.org/shipsys/rudder">решатель устройств</a>),
+  критерии остойчивости — по решателю
+  <a href="https://shadeswd.duckdns.org/shipstat/">статики корабля</a>;
   первоисточники — в <a href="sources">источниках</a>.</p>
 </main>
 <script src="assets/site.js" data-root="./" data-page="rmrs"></script>
 <script src="lib/rmrs.js"></script>
+<script src="lib/rmrs-graph.js"></script>
 <script>
 'use strict';
+/* --- разделы Правил: заголовок, якорь, примечание --- */
+const SECTIONS = [
+  { id: 'sec-hull', title: 'ч. II «Корпус» — общий продольный изгиб',
+    note: 'Волновые моменты перегиба и прогиба (IACS UR S11), суммарные расчётные моменты, минимальный момент сопротивления, напряжения в палубе и днище, коэффициент использования допускаемых напряжений.' },
+  { id: 'sec-rudder', title: 'ч. III «Устройства, оборудование и снабжение» — рулевое устройство',
+    note: 'Полный каскад: площадь и компоновка пера, эффективность рулевого комплекса, силы F₁ (ход вперёд) и F₂ (в струе винта), моменты на баллере, диаметр баллера, толщина обшивки пера. Числа выверены по расчётной работе (контроль: L=170 м, d=10 м, B=24 м, C_b=0,8, v=15,3 уз).' },
+  { id: 'sec-supply', title: 'ч. III — снабжение',
+    note: 'Характеристика снабжения N_c. Таблица выбора якорей и якорных цепей по N_c — в плане оцифровки.' },
+  { id: 'sec-osns', title: 'Кодекс ОСНС 2008 — качка и критерии остойчивости',
+    note: 'Период и амплитуда бортовой качки (таблицы X₁, X₂, k, s), плечи ветра и шквала, статический угол крена, критерий погоды K = b/a и нормативы основных критериев ДСО.' },
+  { id: 'sec-sgisc', title: 'SGISC MSC.1/Circ.1627 — второе поколение критериев',
+    note: 'Уровень 1: pure loss of stability (GM_min при осадке подошвы волны, порог R_PLA) и parametric roll (δGM₁).' },
+];
+/* классификация величины по тексту rule */
+function sectionOf(rule) {
+  const s = rule || '';
+  if (s.includes('SGISC')) return 'sec-sgisc';
+  if (s.includes('ОСНС')) return 'sec-osns';
+  if (s.includes('ч. III')) return s.includes('3.2') ? 'sec-supply' : 'sec-rudder';
+  return 'sec-hull';
+}
+/* --- живые калькуляторы (по разделам) --- */
 const CALCS = [
-  { fn: 'waveMoments', title: 'Волновые изгибающие моменты (ч. II, 1.4.4.1 / IACS UR S11)',
+  { sec: 'sec-hull', fn: 'waveMoments', title: 'Волновые изгибающие моменты (ч. II, 1.4.4.1 / IACS UR S11)',
     inputs: [['L', 100, 'м'], ['B', 16, 'м'], ['Cb', 0.7, '']] },
-  { fn: 'minSectionModulus', title: 'Минимальный момент сопротивления (ч. II, 1.4.6.7)',
+  { sec: 'sec-hull', fn: 'minSectionModulus', title: 'Минимальный момент сопротивления (ч. II, 1.4.6.7)',
     inputs: [['L', 100, 'м'], ['B', 16, 'м'], ['Cb', 0.7, ''], ['k', 1, '']] },
-  { fn: 'allowableStress', title: 'Допускаемые напряжения общего изгиба (ч. II, 1.4.6)',
+  { sec: 'sec-hull', fn: 'allowableStress', title: 'Допускаемые напряжения общего изгиба (ч. II, 1.4.6)',
     inputs: [['k', 1, '(1 — обычная сталь; 0,78/0,72 — повышенной прочности)']] },
-  { fn: 'rudderArea', title: 'Площадь пера руля (ч. III, 2.2)',
+  { sec: 'sec-rudder', fn: 'rudderArea', title: 'Площадь пера руля (ч. III, 2.2)',
     inputs: [['L', 170, 'м'], ['d', 10, 'м'], ['B', 24, 'м'], ['Cb', 0.8, '']] },
-  { fn: 'rollPeriod', title: 'Период бортовой качки (Кодекс ОСНС 2008)',
+  { sec: 'sec-osns', fn: 'rollPeriod', title: 'Период бортовой качки (Кодекс ОСНС 2008)',
     inputs: [['B', 16, 'м'], ['d', 5.6, 'м'], ['L', 100, 'м'], ['h', 0.38, 'м']] },
 ];
-const host = document.getElementById('calcs');
+/* граф-калькуляторы: то же дерево формул, что на странице «Каскад», но по одной цели */
+const GCALCS = [
+  { sec: 'sec-rudder', target: 'd0_baller', title: 'Диаметр баллера d₀ полным каскадом (ч. III, 2.2–2.3)',
+    inputs: [['L', 170, 'м'], ['d', 10, 'м'], ['B', 24, 'м'], ['Cb', 0.8, ''], ['v_kn', 15.3, 'уз'],
+      ['h_rud', 7, 'м'], ['T_prop', 798, 'кН'], ['D_v', 6, 'м'], ['ReH', 235, 'МПа']] },
+  { sec: 'sec-rudder', target: 's_plate', title: 'Толщина обшивки пера (ч. III, 2.4.1.1)',
+    inputs: [['L', 170, 'м'], ['d', 10, 'м'], ['B', 24, 'м'], ['Cb', 0.8, ''], ['v_kn', 15.3, 'уз'],
+      ['h_rud', 7, 'м'], ['T_prop', 798, 'кН'], ['D_v', 6, 'м'], ['ReH', 235, 'МПа'],
+      ['a_plate', 0.6, 'м'], ['b_plate', 1.0, 'м'], ['k12_plate', 18.6, ''], ['k13_plate', 1, '']] },
+  { sec: 'sec-supply', target: 'N_supply', title: 'Характеристика снабжения N_c (ч. III, 3.2.1)',
+    inputs: [['V', 3973, 'м³'], ['B', 16, 'м'], ['h_board', 12, 'м'], ['A_nad', 900, 'м²']] },
+  { sec: 'sec-osns', target: 'K_weather', title: 'Критерий погоды K = b/a (Кодекс ОСНС, 2.3.1)',
+    inputs: [['a_area', 0.05, 'м·рад'], ['b_area', 0.08, 'м·рад']] },
+  { sec: 'sec-osns', target: 'theta0_stat', title: 'Статический угол крена θ₀ (метацентрическое приближение)',
+    inputs: [['P_wind', 504, 'Па'], ['A_par', 400, 'м²'], ['Z_par', 5, 'м'], ['V', 3973, 'м³'], ['GM', 0.38, 'м']] },
+  { sec: 'sec-hull', target: 'usage_sigma', title: 'Проверка σ ≤ σ_доп (перегиб и прогиб, ч. II, 1.4)',
+    inputs: [['L', 100, 'м'], ['B', 16, 'м'], ['Cb', 0.7, ''], ['k_mat', 1, ''],
+      ['Msw', 180000, 'кН·м'], ['Msw_sag', -120000, 'кН·м'], ['W_deck', 3.06, 'м³'], ['W_bottom', 3.4, 'м³']] },
+  { sec: 'sec-sgisc', target: 'PLA_check', title: 'Pure loss of stability, уровень 1 (SGISC 2.10.2)',
+    inputs: [['KB', 3.1, 'м'], ['I_TL', 6500, 'м⁴'], ['V', 3973, 'м³'], ['zg', 4.8, 'м']] },
+];
+
+/* --- сборка страницы --- */
+const all = RMRSG.quantities();
+document.getElementById('q-count').textContent = all.length;
+const host = document.getElementById('sections');
+for (const s of SECTIONS) {
+  const qs = all.filter(q => sectionOf(q.rule) === s.id);
+  const sec = document.createElement('section');
+  sec.id = s.id;
+  sec.className = 'panel';
+  sec.innerHTML = `<h2 style="margin-top:4px">${s.title}</h2>
+    <p class="small">${s.note}</p>
+    <details><summary><b>Оцифрованные величины раздела (${qs.length})</b> — из вычислительного графа</summary>
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;font:13.5px system-ui;margin-top:8px" border="1" cellpadding="5">
+      <tr><th>id</th><th>величина</th><th>ед.</th><th>формула</th><th>пункт Правил</th></tr>
+      ${qs.map(q => `<tr><td><a href="ship" style="text-decoration:none"><code>${q.id}</code></a></td>
+        <td>${q.title}</td><td>${q.unit}</td><td>${q.formula}</td>
+        <td class="small">${q.rule}</td></tr>`).join('')}
+    </table></div>
+    <p class="small">Любая из величин доступна в <a href="ship">каскаде</a> и по API:
+    <code>api/ship/calc?target=${qs[0] ? qs[0].id : ''}&…</code></p></details>
+    <div class="calcs"></div>`;
+  host.appendChild(sec);
+}
+
+/* калькуляторы на rmrs.js (пошаговые функции) */
 for (const c of CALCS) {
   const box = document.createElement('div');
-  box.style.cssText = 'margin:0 0 22px';
+  box.style.cssText = 'margin:18px 0 22px';
   box.innerHTML = `<h3 style="margin:6px 0">${c.title}</h3>
     <div class="controls">${c.inputs.map(([n, v, u]) =>
       `<label>${n} <input type="number" step="any" value="${v}" data-k="${n}" style="width:80px"> <span class="small">${u}</span></label>`).join(' ')}</div>
     <div class="note tip out"></div>`;
-  host.appendChild(box);
+  document.querySelector(`#${c.sec} .calcs`).appendChild(box);
   const render = () => {
     const p = {};
     box.querySelectorAll('input').forEach(i => { p[i.dataset.k] = +i.value; });
     const r = RMRS[c.fn](p);
     box.querySelector('.out').innerHTML = r.steps.map(s =>
       `<div style="margin:4px 0;font:14px system-ui">${s.f} = <span style="color:#6b6b74">${s.sub}</span> = <b>${s.res}</b></div>`).join('');
+  };
+  box.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
+  render();
+}
+
+/* калькуляторы на rmrs-graph.js: цель + плоский список шагов каскада */
+function flatten(node, acc, seenIds) {
+  for (const c of node.children || []) flatten(c, acc, seenIds);
+  if (node.formula && !seenIds.has(node.id)) { seenIds.add(node.id); acc.push(node); }
+  return acc;
+}
+for (const c of GCALCS) {
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:18px 0 22px';
+  box.innerHTML = `<h3 style="margin:6px 0">${c.title}</h3>
+    <div class="controls">${c.inputs.map(([n, v, u]) =>
+      `<label>${n} <input type="number" step="any" value="${v}" data-k="${n}" style="width:86px"> <span class="small">${u}</span></label>`).join(' ')}</div>
+    <div class="note tip out"></div>`;
+  document.querySelector(`#${c.sec} .calcs`).appendChild(box);
+  const render = () => {
+    const ctx = {};
+    box.querySelectorAll('input').forEach(i => { ctx[i.dataset.k] = +i.value; });
+    let html;
+    try {
+      const tree = RMRSG.compute(c.target, ctx);
+      html = flatten(tree, [], new Set()).map(n =>
+        `<div style="margin:4px 0;font:14px system-ui"><b>${n.id}</b>: ${n.formula}
+         ${n.sub ? ` = <span style="color:#6b6b74">${n.sub}</span>` : ''}
+         = <b>${n.value}</b>${n.unit && n.unit !== '—' ? ' ' + n.unit : ''}</div>`).join('');
+    } catch (e) { html = `<div class="small">${e.message}</div>`; }
+    box.querySelector('.out').innerHTML = html;
   };
   box.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
   render();
