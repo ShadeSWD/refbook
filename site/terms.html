@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
+<script src="assets/site.js" data-root="./" data-page="terms"></script>
 <main class="wrap">
   <h1>Словарь терминов</h1>
   <p class="lead">Определения терминов, встречающихся на сайтах кластера.
@@ -23,7 +24,6 @@
   <p class="small">API: <a href="api/tables/terms.json">весь словарь JSON</a> ·
   <a href="api/terms?q=метацентр">api/terms?q=метацентр</a> — поиск по слову.</p>
 </main>
-<script src="assets/site.js" data-root="./" data-page="terms"></script>
 <script>
 'use strict';
 fetch('api/tables/terms.json').then(r => r.json()).then(d => {
