@@ -302,7 +302,8 @@
         <div class="scrollx" style="margin-top:10px"><table class="sh">
           <thead><tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead>
           <tbody>${kechRows.map((r) => '<tr>' + r.map(
-            (v, i) => `<td>${fmt(v, i === 0 || i === 1 ? 3 : (Math.abs(v) >= 1000 ? 0 : 3))}</td>`).join('') + '</tr>').join('')}
+            (v, i) => `<td>${fmt(v, i < 2 ? 3 : (Math.abs(v) >= 1000 ? 0
+              : Math.abs(v) >= 100 ? 1 : Math.abs(v) >= 10 ? 2 : 3))}</td>`).join('') + '</tr>').join('')}
           </tbody></table></div>
         <div class="caption">Обозначения колонок: T — осадка, trim — дифферент,
         Lwl/Bwl — длина и ширина по ватерлинии, V — объёмное водоизмещение,
