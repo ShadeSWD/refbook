@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Банк судов-прототипов</title>
+<meta name="description" content="Оцифрованные учебные варианты судов: главные размерения, коэффициенты полноты, метацентрические радиусы и кривые элементов теоретического чертежа шестнадцати прототипов — с фильтром по типу, живыми графиками и передачей выбранного судна в решатели проектирования и статики.">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  table.sh { width: 100%; border-collapse: collapse; font: 13.5px system-ui, sans-serif; }
+  table.sh th, table.sh td { border-bottom: 1px solid #eceae3; padding: 4px 8px; text-align: right; white-space: nowrap; }
+  table.sh th { text-align: right; border-bottom: 1.5px solid #d8d6cf; font-weight: 600; background: #fbfaf6; position: sticky; top: 0; }
+  table.sh td.l, table.sh th.l { text-align: left; }
+  table.sh tbody tr { cursor: pointer; }
+  table.sh tbody tr:hover { background: #eef3ff; }
+  table.sh tbody tr.on { background: #eef3ff; box-shadow: inset 3px 0 0 #2b4fa0; }
+  .scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .chip-row button { cursor: pointer; font: 13.5px system-ui, sans-serif;
+    border: 1px solid var(--line); background: #fff; color: #46464e;
+    border-radius: 999px; padding: 3px 11px; }
+  .chip-row button.on { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .kv { width: 100%; border-collapse: collapse; font: 13.5px system-ui, sans-serif; }
+  .kv td { border-bottom: 1px solid #f0eee7; padding: 3px 6px; vertical-align: baseline; }
+  .kv td.v { text-align: right; white-space: nowrap; font-family: ui-monospace, monospace; }
+  .kv caption { text-align: left; font: 600 14px system-ui; padding: 6px 0 3px; color: #3a3a42; }
+  .katex-display { overflow-x: auto; overflow-y: hidden; }
+</style>
+</head>
+<body>
+<script src="assets/site.js" data-root="./" data-page="ships"></script>
+<main class="wrap">
+  <h1>Банк судов-прототипов</h1>
+  <p class="lead">Шестнадцать реальных учебных вариантов судов, оцифрованных
+  в единую таблицу: главные размерения, характеристики объёма и ватерлинии,
+  коэффициенты полноты, метацентрические радиусы и <b>кривые элементов
+  теоретического чертежа</b> (КЭТЧ) по осадкам. Любое судно можно взять как
+  прототип: кнопка в карточке передаёт его размерения в
+  <a href="https://shadeswd.duckdns.org/design/solver">расчёт главных
+  элементов</a> и в <a href="https://shadeswd.duckdns.org/shipstat/solver">расчёт
+  посадки и остойчивости</a>. Источник данных — варианты заданий кафедры
+  проектирования судов СПбГМТУ; публикуются только извлечённые числовые
+  характеристики, исходные файлы заданий не выкладываются.</p>
+
+  <h2>Прототипы</h2>
+  <div class="panel">
+    <div class="chip-row" id="type-chips"></div>
+    <p style="margin:4px 0 8px">
+      <input type="search" id="ship-q" placeholder="поиск: тип, номер варианта, название…"
+        style="padding:6px 10px;width:min(300px,100%)">
+      <span class="small" id="ship-count"></span></p>
+    <div class="scrollx"><table class="sh" id="ships-table"></table></div>
+    <div class="caption">δ — коэффициент общей полноты, α — полноты
+    ватерлинии, β — полноты миделя, φ — призматический; звёздочкой отмечена
+    высота борта, восстановленная как H = T + минимальный надводный борт (она
+    известна только там, где в задании есть сводка гидростатики). Ширина в
+    таблице — расчётная (по ватерлинии при проектной осадке): у части
+    вариантов «ширина на миделе» в шапке файла снята не по мидель-шпангоуту.</div>
+  </div>
+
+  <h2>Карточка судна</h2>
+  <div id="ship-card"></div>
+
+  <h2>Как эти данные устроены</h2>
+  <p>Каждый вариант — результат расчёта гидростатики по корпусу, построенному
+  в судостроительной CAD-системе. Сводка даёт элементы при проектной осадке,
+  таблица КЭТЧ — те же элементы как функции осадки. Связи между величинами —
+  стандартные соотношения статики корабля:</p>
+  $$\delta = \frac{V}{L\,B\,T},\qquad
+    \alpha = \frac{A_w}{L\,B},\qquad
+    \beta = \frac{A_m}{B\,T},\qquad
+    \varphi = \frac{V}{A_m L} = \frac{\delta}{\beta}$$
+  <p>Метацентрические радиусы получаются из моментов инерции площади
+  ватерлинии относительно центральных осей, а аппликата метацентра — от
+  центра величины:</p>
+  $$r = \frac{I_x}{V},\qquad R = \frac{I_f}{V},\qquad
+    z_m = z_c + r,\qquad z_{M} = z_c + R$$
+  <p class="small">Число тонн на сантиметр осадки \(q = \rho A_w / 100\), момент
+  дифферентующий на 1 см \(m_1 = D\,(z_c + R - z_g)/(100\,L)\). Абсциссы
+  \(x_c\) и \(x_f\) в исходных данных отсчитываются от кормового
+  перпендикуляра (x = 0), поэтому в карточке они приведены и от миделя:
+  для судна с нормальным дифферентом на корму разность \(x_c - x_f\) невелика
+  и по знаку соответствует смещению центра величины в нос; при
+  \(x_c - x_f &lt; 0\) центр величины смещён к корме относительно центра
+  тяжести площади ватерлинии.</p>
+  <p class="small">Методика работы с КЭТЧ — практикум кафедры (расчёт посадки
+  по кривым элементов, определение изменения осадок при приёме груза).
+  Полные расчёты по этим данным — на сайтах
+  <a href="https://shadeswd.duckdns.org/shipstat/">«Статика корабля»</a> и
+  <a href="https://shadeswd.duckdns.org/design/">«Проектирование судов»</a>.</p>
+
+  <h2>Программный доступ</h2>
+  <p class="small">Вся таблица одним файлом:
+  <a href="api/tables/ships.json">api/tables/ships.json</a> (CORS открыт).
+  В файле: <code>ships</code> — массив судов
+  (<code>L_pp</code>, <code>L_max</code>, <code>B</code>, <code>B_eff</code>,
+  <code>T</code>, <code>H_est</code>, <code>rho</code>, блок
+  <code>hydro</code> — сводка гидростатики, блок <code>design</code> —
+  элементы при проектной осадке, <code>kech</code> — таблица кривых элементов
+  строками по колонкам <code>kech_columns</code>, <code>sac</code> — площади
+  шпангоутов), <code>units</code> — единицы, <code>labels</code> — расшифровки
+  обозначений, <code>types</code> — типы судов. Величины, которых нет в
+  исходных данных, в файл не попадают.</p>
+</main>
+<script src="assets/ships.js"></script>
+</body>
+</html>

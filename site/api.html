@@ -36,7 +36,34 @@
   <div class="panel">
     <p><b>Данные</b> (статические JSON, CORS открыт):</p>
     <pre style="overflow-x:auto;font:13px ui-monospace,monospace">GET /ref/api/tables/gost-21937.json   → вся таблица с колонками и источником
-GET /ref/api/tables/materials.json</pre>
+GET /ref/api/tables/materials.json
+GET /ref/api/tables/terms.json        → словарь терминов кластера
+GET /ref/api/tables/formulas.json     → банк формул кластера
+GET /ref/api/tables/ships.json        → банк судов-прототипов (размерения, гидростатика, КЭТЧ)</pre>
+    <p class="small"><b>ships.json</b> — машинный источник страницы
+    <a href="ships">банка судов-прототипов</a>: <code>ships</code> — массив
+    судов (главные размерения <code>L_pp</code>, <code>L_max</code>,
+    <code>B</code>, <code>B_eff</code>, <code>T</code>, <code>H_est</code>,
+    блок <code>hydro</code> — сводка гидростатики, блок <code>design</code> —
+    элементы при проектной осадке, <code>kech</code> — кривые элементов
+    теоретического чертежа строками по колонкам <code>kech_columns</code>,
+    <code>sac</code> — площади шпангоутов), <code>units</code> и
+    <code>labels</code> — единицы и расшифровки обозначений,
+    <code>types</code> — типы судов. Данные извлечены из вариантов заданий
+    кафедры проектирования судов СПбГМТУ; величины, отсутствующие в
+    исходных данных, в файл не попадают. Этот же файл читают выпадающие
+    списки «прототип из банка» в решателях
+    <a href="https://shadeswd.duckdns.org/design/solver">проектирования</a> и
+    <a href="https://shadeswd.duckdns.org/shipstat/solver">статики</a>.</p>
+    <p class="small"><b>formulas.json</b> — машинный источник страницы
+    <a href="formulas">банка формул</a>. Структура: <code>topics</code> —
+    список тем, <code>formulas</code> — объект «ключ → карточка» с полями
+    <code>name</code> (название), <code>tex</code> (запись в LaTeX без
+    обрамляющих <code>$$</code>), <code>vars</code> (массив троек
+    «символ — расшифровка — единица»), <code>cond</code> (границы
+    применимости), <code>src</code> (учебник или норматив), <code>url</code>
+    (глава кластера, где формула выводится) и <code>t</code> (темы). Ключ
+    карточки совпадает с якорем на странице: <code>#f-&lt;ключ&gt;</code>.</p>
     <p><b>Расчёты</b> (тот же rmrs.js, исполняется на сервере — единый
     источник формул):</p>
     <pre style="overflow-x:auto;font:13px ui-monospace,monospace">GET /ref/api/calc                                → список функций

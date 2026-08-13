@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Банк формул кластера</title>
+<meta name="description" content="Единый банк расчётных формул кораблестроительных дисциплин: LaTeX-запись, расшифровка всех обозначений с единицами, границы применимости, первоисточник и ссылка на главу, где формула выводится. Живой поиск по названию, символу и теме; данные доступны по API.">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .f-tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; font-family: system-ui, sans-serif; }
+  .f-tools input[type=search] { padding: 7px 11px; width: min(320px, 100%); font-size: 15px;
+    border: 1px solid var(--line); border-radius: 8px; }
+  #f-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  #f-chips button { cursor: pointer; border: 1px solid var(--line); background: var(--chip); color: inherit; }
+  #f-chips button.on { background: #eef3ff; border-color: #c9d6f2; color: var(--accent2); }
+  .fcard { margin: 14px 0; }
+  .fcard .fhead { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; justify-content: space-between; }
+  .fcard h3 { margin: 0; font-size: 17.5px; }
+  .fcard .fkey { font: 12.5px ui-monospace, Consolas, monospace; color: var(--muted); }
+  .fcard .fanchor { text-decoration: none; color: #9a9aa2; }
+  .fcard .ftex { margin: 4px 0 6px; }
+  .fcard table { font: 14.5px/1.45 system-ui, sans-serif; border-collapse: collapse; margin: 6px 0 8px; }
+  .fcard td { border-bottom: 1px solid var(--line); padding: 3px 12px 3px 0; vertical-align: top; }
+  .fcard td.sym { font: 600 14.5px ui-monospace, Consolas, monospace; white-space: nowrap; }
+  .fcard td.unit { color: var(--muted); white-space: nowrap; }
+  .fcard .fcond { margin: 6px 0 4px; font-size: 15px; }
+  .fcard .fmeta { margin: 4px 0 0; }
+  .fcard .ftopics { color: var(--muted); font: 13px system-ui, sans-serif; }
+  .fcopy { cursor: pointer; font: 13px system-ui, sans-serif; padding: 3px 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: inherit; }
+  .fcopy:hover { border-color: var(--accent2); color: var(--accent2); }
+  .fcard:target { box-shadow: 0 0 0 2px var(--accent2); }
+  main table { display: block; max-width: 100%; overflow-x: auto; }
+</style>
+</head>
+<body>
+<script src="assets/site.js" data-root="./" data-page="formulas"></script>
+<main class="wrap">
+  <h1>Банк формул</h1>
+  <p class="lead">Расчётные формулы всех курсов кластера в одном месте. Каждая
+  карточка содержит запись формулы, расшифровку <b>всех</b> обозначений с
+  единицами, границы применимости, первоисточник и ссылку на главу, где
+  формула выводится, — например, условие прочности при изгибе
+  \(\sigma_{\max} = M / W \le [\sigma]\) ведёт в главу об изгибе балок.
+  Поиск работает и по названию, и по отдельному символу
+  (введите <code>W</code>, <code>Re</code> или <code>σ</code>), и по теме.</p>
+  <div class="panel">
+    <div class="f-tools">
+      <input type="search" id="f-q" placeholder="поиск: название, символ, тема…" autocomplete="off">
+      <span id="f-count" class="small"></span>
+    </div>
+    <div id="f-chips"></div>
+  </div>
+  <div id="f-list"></div>
+  <p id="f-empty" class="note" style="display:none">По запросу ничего не найдено.
+  Попробуйте искать по символу (например, <code>M</code>) или снимите фильтр темы.</p>
+  <h2>Как этим пользоваться</h2>
+  <p>У каждой формулы есть постоянный якорь вида <code>#f-ключ</code> — на неё
+  можно сослаться из любой задачи кластера. Кнопка «LaTeX» кладёт запись
+  формулы в буфер обмена: её можно вставить в отчёт, конспект или страницу с
+  подключённым KaTeX. Весь банк доступен машинно —
+  <a href="api/tables/formulas.json">api/tables/formulas.json</a> (CORS открыт),
+  описание — на странице <a href="api">библиотек и API</a>. Смежные разделы
+  справочника: <a href="terms">словарь терминов</a> и
+  <a href="rmrs">живые калькуляторы формул Правил РМРС</a>.</p>
+  <p class="small">Формулы взяты из глав учебных курсов кластера; поле
+  «источник» указывает учебник или норматив, по которому глава написана.
+  Ссылка «где выводится» ведёт на страницу, откуда формула взята.</p>
+</main>
+<script>
+'use strict';
+(function () {
+  const listEl = document.getElementById('f-list');
+  const chipsEl = document.getElementById('f-chips');
+  const emptyEl = document.getElementById('f-empty');
+  const countEl = document.getElementById('f-count');
+  const qEl = document.getElementById('f-q');
+  const texMap = new Map();
+  let topic = '';
+  let total = 0;
+
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  /* в LaTeX сырые < и > ломают разметку — переводим в команды KaTeX */
+  const safeTex = s => String(s).replace(/</g, '\\lt ').replace(/>/g, '\\gt ');
+
+  /* дорисовать KaTeX: mathfmt.js подгружает рендерер асинхронно, поэтому ждём */
+  function mathify(el, tries) {
+    if (window.renderMathInElement) {
+      try {
+        window.renderMathInElement(el, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '\\(', right: '\\)', display: false },
+          ],
+          throwOnError: false,
+        });
+      } catch (e) { /* формула останется текстом — не роняем страницу */ }
+    } else if ((tries || 0) < 60) {
+      setTimeout(() => mathify(el, (tries || 0) + 1), 250);
+    }
+  }
+
+  function card(key, v) {
+    const topics = (v.t || []).join('|');
+    const vars = (v.vars || []).map(r =>
+      `<tr><td class="sym">${esc(r[0])}</td><td>${esc(r[1])}</td>` +
+      `<td class="unit">${esc(r[2] || '—')}</td></tr>`).join('');
+    const hay = [key, v.name, v.cond, v.src, (v.t || []).join(' '),
+      (v.vars || []).map(r => r.join(' ')).join(' ')].join(' ').toLowerCase();
+    return `<article class="panel fcard" id="f-${esc(key)}" data-topics="${esc(topics)}"
+      data-hay="${esc(hay)}">
+      <div class="fhead">
+        <h3>${esc(v.name)} <a class="fanchor" href="#f-${esc(key)}" title="ссылка на формулу">#</a></h3>
+        <span><span class="fkey">${esc(key)}</span>
+          <button class="fcopy" type="button" data-k="${esc(key)}">LaTeX</button></span>
+      </div>
+      <div class="ftex">$$${safeTex(v.tex)}$$</div>
+      <table><tbody>${vars}</tbody></table>
+      <p class="fcond"><b>Применимость.</b> ${v.cond || '—'}</p>
+      <p class="fmeta small">Источник: ${esc(v.src || '—')}
+        ${v.url ? `· <a href="${esc(v.url)}">где выводится →</a>` : ''}
+        · <span class="ftopics">${esc((v.t || []).join(', '))}</span></p>
+    </article>`;
+  }
+
+  function apply() {
+    const q = qEl.value.trim().toLowerCase();
+    let n = 0;
+    listEl.querySelectorAll('.fcard').forEach(a => {
+      const okQ = !q || a.dataset.hay.includes(q);
+      const okT = !topic || a.dataset.topics.split('|').includes(topic);
+      const vis = okQ && okT;
+      a.style.display = vis ? '' : 'none';
+      if (vis) n++;
+    });
+    countEl.textContent = `показано ${n} из ${total}`;
+    emptyEl.style.display = n ? 'none' : '';
+    chipsEl.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('on', b.dataset.t === topic));
+  }
+
+  fetch('api/tables/formulas.json').then(r => r.json()).then(d => {
+    const entries = Object.entries(d.formulas)
+      .sort((a, b) => (a[1].t[0] || '').localeCompare(b[1].t[0] || '', 'ru')
+        || a[1].name.localeCompare(b[1].name, 'ru'));
+    total = entries.length;
+    entries.forEach(([k, v]) => texMap.set(k, v.tex));
+    listEl.innerHTML = entries.map(([k, v]) => card(k, v)).join('');
+    const topics = d.topics && d.topics.length ? d.topics
+      : [...new Set(entries.flatMap(([, v]) => v.t || []))].sort((a, b) => a.localeCompare(b, 'ru'));
+    chipsEl.innerHTML = `<button class="badge" type="button" data-t="">все темы</button>` +
+      topics.map(t => `<button class="badge" type="button" data-t="${esc(t)}">${esc(t)}</button>`).join('');
+    chipsEl.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      topic = b.dataset.t === topic ? '' : b.dataset.t;
+      apply();
+    });
+    qEl.addEventListener('input', apply);
+    listEl.addEventListener('click', e => {
+      const b = e.target.closest('.fcopy');
+      if (!b) return;
+      const tex = texMap.get(b.dataset.k) || '';
+      const done = () => { b.textContent = 'скопировано'; setTimeout(() => { b.textContent = 'LaTeX'; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tex).then(done, () => fallback(tex, done));
+      } else { fallback(tex, done); }
+    });
+    apply();
+    mathify(listEl, 0);
+    if (location.hash) {
+      const el = document.getElementById(location.hash.slice(1));
+      if (el) setTimeout(() => el.scrollIntoView({ block: 'center' }), 300);
+    }
+  }).catch(() => {
+    listEl.innerHTML = '<p class="note warn">Не удалось загрузить банк формул ' +
+      '(<code>api/tables/formulas.json</code>).</p>';
+  });
+
+  function fallback(text, done) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { /* noop */ }
+    document.body.removeChild(ta);
+  }
+})();
+</script>
+</body>
+</html>
