@@ -149,7 +149,13 @@
         x1: X(s.T), y1: padT, x2: X(s.T), y2: H - padB,
         stroke: '#b3382e', 'stroke-width': 1.2, 'stroke-dasharray': '4 4',
       }, svg);
-      const lt = el('text', { x: X(s.T) + 4, y: padT + 10 }, svg);
+      // подпись проектной осадки ниже верхней линии сетки и «от себя» к центру:
+      // у края она садилась на числа шкалы
+      const toLeft = X(s.T) > W / 2;
+      const lt = el('text', {
+        x: X(s.T) + (toLeft ? -4 : 4), y: padT + 24,
+        'text-anchor': toLeft ? 'end' : 'start',
+      }, svg);
       lt.style.cssText = 'font:10.5px system-ui;fill:#b3382e';
       lt.textContent = 'T = ' + fmt(s.T, 2) + ' м';
     }
