@@ -54,9 +54,10 @@
   ]).then(function (res) {
     var hub = res[0], long = res[1] || {};
     if (!hub || !Array.isArray(hub.sites)) {
-      host.innerHTML = '<p class="small">Список сайтов отдаётся общим файлом кластера '
-        + '<code>/hub.json</code>; сейчас он недоступен — вероятно, сайт открыт '
-        + 'отдельно от кластера.</p>';
+      /* Запасной текст читают обычные посетители, поэтому без внутренней кухни. */
+      host.innerHTML = '<p class="small">Список сайтов сейчас недоступен. '
+        + 'Откройте <a href="https://shadeswd.duckdns.org/">главную кластера</a> — '
+        + 'оттуда открываются все курсы.</p>';
       return;
     }
     render(hub.sites.slice(), long);
